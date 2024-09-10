@@ -1,6 +1,7 @@
 ﻿using DBServiceLocal.Controllers;
 using DBServiceLocal.Dto;
 using MySqlConnector;
+using System.Data;
 
 namespace DBServiceLocal.DataAccessLayer
 {
@@ -14,24 +15,27 @@ namespace DBServiceLocal.DataAccessLayer
             _configuration = configuration;
         }
 
-        public async Task<OrderResponseByOrderId> GetResponseByOrderIdFromDB(string OrderId)
+        public async Task<List<OrderResponseByOrderId>> GetResponseByOrderIdFromDB(string OrderId)
         {
-            OrderResponseByOrderId orderResponseByOrderId = null;
+            MySqlConnection conn = null;
+            MySqlCommand command = null;
+            List<OrderResponseByOrderId> orderResponseByOrderId = null;
             try
             {
-                var conn = new MySqlConnection(_configuration["DataBaseConfig:ConnectionString"]);
+                conn = new MySqlConnection(_configuration["DataBaseConfig:ConnectionString"]);
                 await conn.OpenAsync();
-                var command = conn.CreateCommand();
-                command.CommandText = "select o.OrderId,o.Status,o.UserId,o.ProviderId,o.TotalAmount,od.OrderPaymentDetails,od.OrderDetails from tbl_orders o join tbl_order_details od on o.OrderId = od.OrderId and o.OrderId = @transactionid";
+                command = conn.CreateCommand();
+                command.CommandText = "select o.OrderId,o.Status,o.UserId,o.ProviderId,o.TotalAmount,od.OrderPaymentDetails,od.OrderDetails from tbl_orders o join tbl_order_details od on o.OrderId = od.OrderId and o.UserId = @transactionid order by 1 desc limit 10";
 
                 command.Parameters.AddWithValue("@transactionid", OrderId);
 
-                var reader = await command.ExecuteReaderAsync();
+                var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
 
                 if (reader.HasRows == true) {
+                    orderResponseByOrderId = new List<OrderResponseByOrderId>();
                     while (reader.Read())
                     {
-                        orderResponseByOrderId = new OrderResponseByOrderId
+                        orderResponseByOrderId.Add( new OrderResponseByOrderId
                         {
                             OrderId = reader.GetString("OrderId"),
                             Status = reader.GetString("Status"),
@@ -40,7 +44,7 @@ namespace DBServiceLocal.DataAccessLayer
                             TotalAmount =  reader.GetDouble("TotalAmount"),
                             OrderPaymentDetails = reader.GetString("OrderPaymentDetails"),
                             OrderDetails = reader.GetString("OrderDetails")
-                        };
+                        });
                     }
                 }
 
@@ -50,13 +54,20 @@ namespace DBServiceLocal.DataAccessLayer
             catch (Exception ex)
             {
                 orderResponseByOrderId = null;
-                return orderResponseByOrderId;
+                _logger.LogError(ex, "OrderDAL : GetResponseByOrderIdFromDB : Exception : ");
             }
             finally 
             {
-            
+                if (command != null) 
+                {
+                    command.Dispose();
+                }
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
             }
-            return null;
+            return orderResponseByOrderId;
         }
     }
 }

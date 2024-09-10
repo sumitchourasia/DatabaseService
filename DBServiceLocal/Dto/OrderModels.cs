@@ -25,7 +25,7 @@
     public class APIResponse { 
         public int Status { get; set; }
         public string Message { get; set; }
-        public OrderResponseByOrderId OrderResponseByOrderId { get; set; }
+        public List<OrderResponseByOrderId> OrderResponseByOrderId { get; set; }
     }
 
 }

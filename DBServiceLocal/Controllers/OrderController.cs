@@ -33,6 +33,7 @@ namespace DBServiceLocal.Controllers
         [Route("GetOrderDetailByOrderIdAsync")] 
         public async Task<APIResponse> GetOrderDetailByOrderIdAsync(OrderRequestByOrderId orderRequestByOrderId) 
         {
+            APIResponse aPIResponse = null;
             //_logger.LogInformation($"OrderController : GetOrderDetailByOrderIdAsync : Requesst : {orderRequestByOrderId}");
             _logger.LogInformation($"OrderController : GetOrderDetailByOrderIdAsync : Requesst : {JsonConvert.SerializeObject(orderRequestByOrderId)}");
 
@@ -49,11 +50,11 @@ namespace DBServiceLocal.Controllers
             _logger.LogInformation($"OrderController : GetOrderDetailByOrderIdAsync : OrderID : {orderRequestByOrderId1.OrderId}");
 
             // call db
-            OrderResponseByOrderId dbResponse = await _orderDAL.GetResponseByOrderIdFromDB(orderRequestByOrderId1.OrderId);
+            List<OrderResponseByOrderId> dbResponse = await _orderDAL.GetResponseByOrderIdFromDB(orderRequestByOrderId1.OrderId).ConfigureAwait(false);
 
-            if (dbResponse != null && !string.IsNullOrEmpty(dbResponse.OrderId))
+            if (dbResponse != null && dbResponse.Count>0)
             {
-                APIResponse aPIResponse = new APIResponse()
+                aPIResponse = new APIResponse()
                 {
                     Status = 100,
                     Message = "Success",
@@ -62,16 +63,15 @@ namespace DBServiceLocal.Controllers
                 return aPIResponse;
             }
             else {
-                APIResponse aPIResponse = new APIResponse()
+                aPIResponse = new APIResponse()
                 {
-                    Status = 301,
+                    Status = 302,
                     Message = "Failed",
                     OrderResponseByOrderId = null
                 };
                 return aPIResponse;
             }
-
-            return new APIResponse();
+            return aPIResponse;
         }
     }
 }
